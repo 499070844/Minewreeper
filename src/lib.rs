@@ -67,14 +67,18 @@ impl Minewreeper {
         for b in &self.blocks {
             if b.is_boom {
                 let cur_pos = &b.point;
-                let e = Minewreeper::get_block_idx(&(cur_pos.0 + 1, cur_pos.1));
-                let s = Minewreeper::get_block_idx(&(cur_pos.0, cur_pos.1 - 1));
-                let n = Minewreeper::get_block_idx(&(cur_pos.0, cur_pos.1 + 1));
-                let w = Minewreeper::get_block_idx(&(cur_pos.0 - 1, cur_pos.1));
-                let en = Minewreeper::get_block_idx(&(cur_pos.0 + 1, cur_pos.1 + 1));
-                let es = Minewreeper::get_block_idx(&(cur_pos.0 + 1, cur_pos.1 - 1));
-                let wn = Minewreeper::get_block_idx(&(cur_pos.0 - 1, cur_pos.1 + 1));
-                let ws = Minewreeper::get_block_idx(&(cur_pos.0 - 1, cur_pos.1 - 1));
+                let cur_pos_x_add = cur_pos.0.checked_add(1);
+                let cur_pos_x_sub = cur_pos.0.checked_sub(1);
+                let cur_pos_y_add = cur_pos.1.checked_add(1);
+                let cur_pos_y_sub = cur_pos.1.checked_sub(1);
+                let e = Minewreeper::get_block_idx(&(cur_pos_x_add, Some(cur_pos.1)));
+                let s = Minewreeper::get_block_idx(&(Some(cur_pos.0), cur_pos_y_sub));
+                let n = Minewreeper::get_block_idx(&(Some(cur_pos.0), cur_pos_y_add));
+                let w = Minewreeper::get_block_idx(&(cur_pos_x_sub, Some(cur_pos.1)));
+                let en = Minewreeper::get_block_idx(&(cur_pos_x_add, cur_pos_y_add));
+                let es = Minewreeper::get_block_idx(&(cur_pos_x_add, cur_pos_y_sub));
+                let wn = Minewreeper::get_block_idx(&(cur_pos_x_sub, cur_pos_y_add));
+                let ws = Minewreeper::get_block_idx(&(cur_pos_x_sub, cur_pos_y_sub));
                 unsafe_blocks.push(e);
                 unsafe_blocks.push(s);
                 unsafe_blocks.push(n);
@@ -92,11 +96,15 @@ impl Minewreeper {
         }
     }
 
-    pub fn get_block_idx(pos: &(u8, u8)) -> Option<usize> {
-        println!("{:?}", pos);
-        if pos.0 < 0 || pos.0 > 8 { return None }
-        if pos.1 < 0 || pos.1 > 8 { return None }
-        Some((pos.0 + (8 - pos.1) * 9) as usize)
+    pub fn get_block_idx(pos: &(Option<u8>, Option<u8>)) -> Option<usize> {
+        match pos {
+            (None, _) | (_, None) => { return None },
+            (Some(x), Some(y)) => {
+                if x < &0 || x > &8 { return None }
+                if y < &0 || y > &8 { return None }
+                return Some((x + (8 - y) * 9) as usize)
+            }
+        }
     }
 }
 
@@ -182,8 +190,8 @@ mod tests {
             mine.push((x, y));
         }
         let mut board = Minewreeper::init(mine);
-        print!("{}", board);
-        print!("\r\n");
+        // print!("{}", board);
+        // print!("\r\n");
         board.crutalmovment();
         println!("{}", board);
     }
