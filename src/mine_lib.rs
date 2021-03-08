@@ -11,6 +11,7 @@
 
 use std::{collections::HashMap, fmt::*};
 
+
 pub struct Minewreeper {
     /// 一共81个
     total: u8,
@@ -62,31 +63,38 @@ impl Minewreeper {
         self.blocks.len() > 0
     }
 
+    pub fn around_me(point: &(u8, u8)) -> Vec<Option<usize>> {
+        let mut neighborhood: Vec<Option<usize>> = Vec::new();
+        let &(x, y) = point;
+        let cur_pos_x_add = x.checked_add(1);
+        let cur_pos_x_sub = x.checked_sub(1);
+        let cur_pos_y_add = y.checked_add(1);
+        let cur_pos_y_sub = y.checked_sub(1);
+        let e = Minewreeper::get_block_idx(&(cur_pos_x_add, Some(y)));
+        let s = Minewreeper::get_block_idx(&(Some(x), cur_pos_y_sub));
+        let n = Minewreeper::get_block_idx(&(Some(x), cur_pos_y_add));
+        let w = Minewreeper::get_block_idx(&(cur_pos_x_sub, Some(y)));
+        let en = Minewreeper::get_block_idx(&(cur_pos_x_add, cur_pos_y_add));
+        let es = Minewreeper::get_block_idx(&(cur_pos_x_add, cur_pos_y_sub));
+        let wn = Minewreeper::get_block_idx(&(cur_pos_x_sub, cur_pos_y_add));
+        let ws = Minewreeper::get_block_idx(&(cur_pos_x_sub, cur_pos_y_sub));
+        neighborhood.push(e);
+        neighborhood.push(s);
+        neighborhood.push(n);
+        neighborhood.push(w);
+        neighborhood.push(en);
+        neighborhood.push(es);
+        neighborhood.push(wn);
+        neighborhood.push(ws);
+        neighborhood
+    }
+
     pub fn crutalmovment(&mut self) {
         let mut unsafe_blocks = Vec::new();
         for b in &self.blocks {
             if b.is_boom {
                 let cur_pos = &b.point;
-                let cur_pos_x_add = cur_pos.0.checked_add(1);
-                let cur_pos_x_sub = cur_pos.0.checked_sub(1);
-                let cur_pos_y_add = cur_pos.1.checked_add(1);
-                let cur_pos_y_sub = cur_pos.1.checked_sub(1);
-                let e = Minewreeper::get_block_idx(&(cur_pos_x_add, Some(cur_pos.1)));
-                let s = Minewreeper::get_block_idx(&(Some(cur_pos.0), cur_pos_y_sub));
-                let n = Minewreeper::get_block_idx(&(Some(cur_pos.0), cur_pos_y_add));
-                let w = Minewreeper::get_block_idx(&(cur_pos_x_sub, Some(cur_pos.1)));
-                let en = Minewreeper::get_block_idx(&(cur_pos_x_add, cur_pos_y_add));
-                let es = Minewreeper::get_block_idx(&(cur_pos_x_add, cur_pos_y_sub));
-                let wn = Minewreeper::get_block_idx(&(cur_pos_x_sub, cur_pos_y_add));
-                let ws = Minewreeper::get_block_idx(&(cur_pos_x_sub, cur_pos_y_sub));
-                unsafe_blocks.push(e);
-                unsafe_blocks.push(s);
-                unsafe_blocks.push(n);
-                unsafe_blocks.push(w);
-                unsafe_blocks.push(en);
-                unsafe_blocks.push(es);
-                unsafe_blocks.push(wn);
-                unsafe_blocks.push(ws);
+                unsafe_blocks = Minewreeper::around_me(cur_pos);
             }
         }
         for unsafe_idx in unsafe_blocks {
@@ -105,6 +113,41 @@ impl Minewreeper {
                 return Some((x + (8 - y) * 9) as usize)
             }
         }
+    }
+
+    pub fn turn_neighbor(&mut self, center: &(u8, u8)) {
+        let my_neighbor = Minewreeper::around_me(center);
+        let mut flag = false;
+        for neighbor in &my_neighbor {
+            if let &Some(block) = neighbor {
+                let block = &mut self.blocks[block];
+                if block.is_boom() {
+                    flag = true;
+                    break;
+                }
+            }
+        }
+        if flag {
+            for neighbor in my_neighbor {
+                if let Some(block) = neighbor {
+                    let block = &mut self.blocks[block];
+                    block.set_flag(BlockFlag::Selected);
+                }
+            }
+        }
+    }
+
+    pub fn click(&mut self, center: &(u8, u8)) -> bool {
+        let &(x, y) = center;
+        let center_idx = Minewreeper::get_block_idx(&(Some(x), Some(y)));
+        if let Some(idx) = center_idx {
+            let block = &self.blocks[idx];
+            if !block.is_boom() {
+
+            }
+            return block.is_boom();
+        }
+        false
     }
 }
 
@@ -133,7 +176,6 @@ struct Block {
     point: (u8, u8),
     flag: BlockFlag,
     is_boom: bool,
-    // near_block: [NearBlock; 8],
     text: u8,
 }
 
@@ -154,6 +196,14 @@ impl Block {
             std::process::exit(101);
         }
         self.text = t;
+    }
+
+    pub fn is_boom(&self) -> bool {
+        self.is_boom
+    }
+
+    pub fn set_flag(&mut self, flag: BlockFlag) {
+        self.flag = flag;
     }
 }
 

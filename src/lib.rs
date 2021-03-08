@@ -35,5 +35,5 @@ pub fn init() {
     }
     let mut board = Minewreeper::init(mine);
     board.crutalmovment();
-    write(&format!("{}", board)[..]);
+        write(&format!("{}", board)[..]);
 }
