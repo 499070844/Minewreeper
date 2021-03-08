@@ -92,9 +92,9 @@ impl Minewreeper {
     pub fn crutalmovment(&mut self) {
         let mut unsafe_blocks = Vec::new();
         for b in &self.blocks {
-            if b.is_boom {
+            if b.is_boom() {
                 let cur_pos = &b.point;
-                unsafe_blocks = Minewreeper::around_me(cur_pos);
+                unsafe_blocks = [unsafe_blocks, Minewreeper::around_me(cur_pos)].concat();
             }
         }
         for unsafe_idx in unsafe_blocks {
@@ -115,39 +115,40 @@ impl Minewreeper {
         }
     }
 
+    #[inline]
     pub fn turn_neighbor(&mut self, center: &(u8, u8)) {
-        let my_neighbor = Minewreeper::around_me(center);
-        let mut flag = false;
-        for neighbor in &my_neighbor {
-            if let &Some(block) = neighbor {
-                let block = &mut self.blocks[block];
-                if block.is_boom() {
-                    flag = true;
-                    break;
+        let &(x, y) = center;
+        let center_idx = Minewreeper::get_block_idx(&(Some(x), Some(y)));
+        if let Some(idx) = center_idx {
+            let block = &mut self.blocks[idx];
+            block.set_flag(BlockFlag::Selected);
+
+            if !block.is_boom() {
+                let my_neighbor = Minewreeper::around_me(center);
+                let mut all_clear = false;
+                for neighbor in &my_neighbor {
+                    if let &Some(block) = neighbor {
+                        let block = &mut self.blocks[block];
+                        if block.is_boom() {
+                            all_clear = true;
+                            break;
+                        }
+                    }
                 }
-            }
-        }
-        if flag {
-            for neighbor in my_neighbor {
-                if let Some(block) = neighbor {
-                    let block = &mut self.blocks[block];
-                    block.set_flag(BlockFlag::Selected);
+                if all_clear {
+                    for neighbor in my_neighbor {
+                        if let Some(idx) = neighbor {
+                            let block = &mut self.blocks[idx];
+                            block.set_flag(BlockFlag::Selected);
+                        }
+                    }
                 }
             }
         }
     }
 
-    pub fn click(&mut self, center: &(u8, u8)) -> bool {
-        let &(x, y) = center;
-        let center_idx = Minewreeper::get_block_idx(&(Some(x), Some(y)));
-        if let Some(idx) = center_idx {
-            let block = &self.blocks[idx];
-            if !block.is_boom() {
-
-            }
-            return block.is_boom();
-        }
-        false
+    pub fn click(&mut self, center: &(u8, u8)) {
+        self.turn_neighbor(center);
     }
 }
 
@@ -160,6 +161,23 @@ impl Display for Minewreeper {
         for (count, res) in result.iter().enumerate() {
             if count % 9 == 0 {
                 write!(f, "<br />")?;
+            }
+            write!(f, "{} ", res)?;
+        }
+        write!(f, "\r\n")
+    }
+}
+
+
+impl Debug for Minewreeper {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let mut result = Vec::new();
+        for i in 0..self.blocks.len() {
+            result.push(format!("{:?}", self.blocks[i]));
+        }
+        for (count, res) in result.iter().enumerate() {
+            if count % 9 == 0 {
+                write!(f, "\r\n")?;
             }
             write!(f, "{} ", res)?;
         }
@@ -217,11 +235,25 @@ impl Display for Block {
     }
 }
 
+impl Debug for Block {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        match self.flag {
+            BlockFlag::Selected => {
+                match self.is_boom {
+                    true => { return write!(f, "⁕") },
+                    false => { return write!(f, "{}", self.text) },
+                }
+            },
+            BlockFlag::Flaged => { return write!(f, "✭") },
+            BlockFlag::Normal => { return write!(f, "■") },
+        }
+    }
+}
+
 enum BlockFlag {
     Selected,
     Flaged,
     Normal,
-    Marked,
 }
 
 #[cfg(test)]
@@ -229,9 +261,8 @@ mod tests {
     use rand::{thread_rng, Rng};
 
     use crate::Minewreeper;
-
     #[test]
-    fn it_works() {
+    fn crutalmovment_works() {
         let mut mine = Vec::new();
         let mut rng = thread_rng();
         for _ in 0..=10 {
@@ -241,6 +272,21 @@ mod tests {
         }
         let mut board = Minewreeper::init(mine);
         board.crutalmovment();
-        println!("{}", board);
+        println!("{:?}", board);
+    }
+
+    #[test]
+    fn turn_works() {
+        let mut mine = Vec::new();
+        let mut rng = thread_rng();
+        for _ in 0..=10 {
+            let x: u8 = rng.gen_range(0..9);
+            let y: u8 = rng.gen_range(0..9);
+            mine.push((x, y));
+        }
+        let mut board = Minewreeper::init(mine);
+        board.crutalmovment();
+        board.click(&(4,6));
+        println!("{:?}", board);
     }
 }
