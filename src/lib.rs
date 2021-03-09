@@ -1,9 +1,9 @@
-mod utils;
 mod mine_lib;
+mod utils;
 
+use mine_lib::Minewreeper;
+use rand::{thread_rng, Rng};
 use wasm_bindgen::prelude::*;
-use mine_lib::{ Minewreeper };
-use rand::{ thread_rng, Rng };
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -12,7 +12,7 @@ use rand::{ thread_rng, Rng };
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
-extern {
+extern "C" {
     fn alert(s: &str);
     #[wasm_bindgen(js_namespace = document)]
     fn write(s: &str);
@@ -35,5 +35,6 @@ pub fn init() {
     }
     let mut board = Minewreeper::init(mine);
     board.crutalmovment();
+    board.click(&(4, 4));
     write(&format!("{}", board)[..]);
 }
