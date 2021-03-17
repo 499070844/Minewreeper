@@ -89,6 +89,8 @@ impl Model for Minewreeper {
     fn turn_neighbor(&mut self, center: &(u8, u8)) {
         let &(x, y) = center;
         let center_idx = Minewreeper::get_block_idx(&(Some(x), Some(y)));
+        // 如果参数中的格子状态为可打开则开传进来的格子
+        // 打开后若有雷则不继续打开周围的格子了
         match center_idx {
             Some(idx) => {
                 let block = &mut self.blocks[idx];
@@ -105,6 +107,7 @@ impl Model for Minewreeper {
                 return;
             }
         }
+        // 找到周围的格子并重复上面的内容
         let neighbors = Minewreeper::around_me(center);
         for neighbor in neighbors {
             if let Some(idx) = neighbor {
@@ -185,12 +188,9 @@ impl Display for Minewreeper {
             result.push(format!("{}", self.blocks[i]));
         }
         for (count, res) in result.iter().enumerate() {
-            if count % 9 == 0 {
-                write!(f, "<br />")?;
-            }
-            write!(f, "{} ", res)?;
+            write!(f, "{}", res)?;
         }
-        write!(f, "\r\n")
+        write!(f, "")
     }
 }
 
@@ -262,10 +262,10 @@ impl Display for Block {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.flag {
             BlockFlag::Selected => match self.is_boom {
-                true => return write!(f, "⁕"),
+                true => return write!(f, "✹"),
                 false => return write!(f, "{}", self.text),
             },
-            BlockFlag::Flaged => return write!(f, "✭"),
+            BlockFlag::Flaged => return write!(f, "?"),
             BlockFlag::Normal => return write!(f, "■"),
         }
     }
@@ -275,10 +275,10 @@ impl Debug for Block {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         match self.flag {
             BlockFlag::Selected => match self.is_boom {
-                true => return write!(f, "⁕"),
+                true => return write!(f, "✹"),
                 false => return write!(f, "{}", self.text),
             },
-            BlockFlag::Flaged => return write!(f, "✭"),
+            BlockFlag::Flaged => return write!(f, "?"),
             BlockFlag::Normal => return write!(f, "■"),
         }
     }

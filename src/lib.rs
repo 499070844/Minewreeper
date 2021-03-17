@@ -3,9 +3,9 @@ mod utils;
 mod controller;
 
 use model::{ Minewreeper, Model };
+use controller::{Controller};
 use rand::{ thread_rng, Rng };
 use wasm_bindgen::prelude::*;
-
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
 #[cfg(feature = "wee_alloc")]
@@ -15,8 +15,12 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen]
 extern "C" {
     fn alert(s: &str);
+    #[wasm_bindgen]
+    fn log(s: &str);
     #[wasm_bindgen(js_namespace = document)]
-    pub fn write(s: &str);
+    fn write(str: &str);
+    #[wasm_bindgen(js_namespace = window)]
+    fn render(str: &str);
 }
 
 #[wasm_bindgen]
@@ -28,14 +32,15 @@ pub fn greet(name: &str) {
 }
 
 #[wasm_bindgen]
-pub fn init() {
+pub fn main() {
     let mut board = Minewreeper::init();
-    board.turn_neighbor(&(4, 4));
     unsafe {
-        write(&format!("{}", board)[..]);
+        board.dig(&(4,4));
+        board.check(vec![&(0, 0), &(8, 8)]);
     }
 }
 
-pub fn render(str: &str) {
-    write(str)
+#[wasm_bindgen]
+pub fn dig(x: u8, y: u8) {
+
 }
