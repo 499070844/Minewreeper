@@ -3,22 +3,10 @@
 //! 0. 有10个雷
 //!   - 当未反转的格子为10个时胜利
 //! 1. 9*9个格子
-//!   - 如何表示坐标
-//! 2. 如何表示雷
-//! 3. 如何表示安全反转
-//! 4. 反转后还要在上面显示数字
-//! 5. 如何连带其他格子反转
 
 use std::fmt::*;
 
 pub struct Minewreeper {
-    /// 一共81个
-    total: u8,
-    last: u8,
-    /// when
-    /// `last` == 10
-    ///
-    /// `is_wine` == true
     blocks: Vec<Block>,
 }
 
@@ -26,20 +14,16 @@ pub trait Model {
     /// generate a table for game. 从棋盘的左上角开始从左往右生成
     fn init() -> Minewreeper;
     fn renew(&mut self);
-    fn turn_neighbor(&mut self, center: &(u8, u8));
+    fn flip_around(&mut self, center: &(u8, u8));
 }
 
 impl Model for Minewreeper {
     fn init() -> Minewreeper {
         use crate::{ thread_rng, Rng };
-        let mut minewreeper = Minewreeper {
-            total: 81,
-            last: 10,
-            blocks: Vec::new(),
-        };
+        let mut minewreeper = Minewreeper { blocks: Vec::new(), };
 
         let mut mine = Vec::new();
-        // random mine
+        // random create landmines
         let mut rng = thread_rng();
         for _ in 0..=10 {
             let x: u8 = rng.gen_range(0..9);
@@ -47,6 +31,7 @@ impl Model for Minewreeper {
             mine.push((x, y));
         }
 
+        // Setting blocks
         for y1 in (0..9).rev() {
             for x1 in 0..9 {
                 let position = (x1, y1);
@@ -72,6 +57,7 @@ impl Model for Minewreeper {
         minewreeper.crutalmovment();
         minewreeper
     }
+
     fn renew(&mut self) {
         use crate::{ thread_rng, Rng };
         let mut mine = Vec::new();
@@ -86,11 +72,12 @@ impl Model for Minewreeper {
         self.crutalmovment();
     }
 
-    fn turn_neighbor(&mut self, center: &(u8, u8)) {
+    /// 递归翻转周围的格子，若打开的格子上数字不为 0 递归收敛
+    fn flip_around(&mut self, center: &(u8, u8)) {
         let &(x, y) = center;
         let center_idx = Minewreeper::get_block_idx(&(Some(x), Some(y)));
-        // 如果参数中的格子状态为可打开则开传进来的格子
-        // 打开后若有雷则不继续打开周围的格子了
+        // 如果参数中的格子状态为未翻转开则可以翻转
+        // 打开后若有数字不为0(周围有雷)，则不继续打开
         match center_idx {
             Some(idx) => {
                 let block = &mut self.blocks[idx];
@@ -108,13 +95,13 @@ impl Model for Minewreeper {
             }
         }
         // 找到周围的格子并重复上面的内容
-        let neighbors = Minewreeper::around_me(center);
+        let neighbors = Minewreeper::around(center);
         for neighbor in neighbors {
             if let Some(idx) = neighbor {
                 let block = &self.blocks[idx];
                 if block.get_flag() == &BlockFlag::Normal {
                     let &(x, y) = &block.point;
-                    self.turn_neighbor(&(x, y));
+                    self.flip_around(&(x, y));
                 }
             }
         }
@@ -123,7 +110,8 @@ impl Model for Minewreeper {
 }
 
 impl Minewreeper {
-    pub fn around_me(point: &(u8, u8)) -> Vec<Option<usize>> {
+    /// 获取周围的格子的 index
+    pub fn around(point: &(u8, u8)) -> Vec<Option<usize>> {
         let mut neighborhood: Vec<Option<usize>> = Vec::new();
         let &(x, y) = point;
         let cur_pos_x_add = x.checked_add(1);
@@ -149,18 +137,19 @@ impl Minewreeper {
         neighborhood
     }
 
+    /// 一个周围雷数计数器， 棋盘生成时默认所有 block 的 counter 为 0， 用过此方法遍历所有 block 更新 counter
     #[inline]
     fn crutalmovment(&mut self) {
         let mut unsafe_blocks = Vec::new();
         for b in &self.blocks {
             if b.is_boom() {
                 let cur_pos = &b.point;
-                unsafe_blocks = [unsafe_blocks, Minewreeper::around_me(cur_pos)].concat();
+                unsafe_blocks = [unsafe_blocks, Minewreeper::around(cur_pos)].concat();
             }
         }
         for unsafe_idx in unsafe_blocks {
             if let Some(idx) = unsafe_idx {
-                self.blocks[idx].text += 1;
+                self.blocks[idx].counter += 1;
             }
         }
     }
@@ -181,6 +170,7 @@ impl Minewreeper {
     }
 }
 
+/// 把棋盘转化为 String
 impl Display for Minewreeper {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let mut result = Vec::new();
@@ -194,6 +184,7 @@ impl Display for Minewreeper {
     }
 }
 
+/// #[cfg(test)] 中使用的 println!("{:?}", board), 格式化用于显示在 console 中的棋盘
 impl Debug for Minewreeper {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
         let mut result = Vec::new();
@@ -219,7 +210,7 @@ struct Block {
     point: (u8, u8),
     flag: BlockFlag,
     is_boom: bool,
-    text: u8,
+    counter: u8,
 }
 
 impl Block {
@@ -228,17 +219,17 @@ impl Block {
             point: position,
             flag: BlockFlag::Normal,
             is_boom,
-            text: 0,
+            counter: 0,
             // near_block: test,
         }
     }
 
-    pub fn set_text(&mut self, t: u8) {
+    pub fn set_counter(&mut self, t: u8) {
         if t > 8 {
             println!("error! text only small than 9");
             std::process::exit(101);
         }
-        self.text = t;
+        self.counter = t;
     }
 
     pub fn is_boom(&self) -> bool {
@@ -250,7 +241,7 @@ impl Block {
     }
 
     pub fn get_text(&self) -> u8 {
-        self.text
+        self.counter
     }
 
     pub fn get_flag(&self) -> &BlockFlag {
@@ -263,7 +254,7 @@ impl Display for Block {
         match self.flag {
             BlockFlag::Selected => match self.is_boom {
                 true => return write!(f, "✹"),
-                false => return write!(f, "{}", self.text),
+                false => return write!(f, "{}", self.counter),
             },
             BlockFlag::Flaged => return write!(f, "?"),
             BlockFlag::Normal => return write!(f, "■"),
@@ -276,7 +267,7 @@ impl Debug for Block {
         match self.flag {
             BlockFlag::Selected => match self.is_boom {
                 true => return write!(f, "✹"),
-                false => return write!(f, "{}", self.text),
+                false => return write!(f, "{}", self.counter),
             },
             BlockFlag::Flaged => return write!(f, "?"),
             BlockFlag::Normal => return write!(f, "■"),
@@ -284,13 +275,18 @@ impl Debug for Block {
     }
 }
 
+/// 格子的种类
 #[derive(PartialEq)]
 enum BlockFlag {
+    /// 已翻转
     Selected,
+    /// 标记为问号
     Flaged,
+    /// 未翻转
     Normal,
 }
 
+///  这个还没用上
 #[derive(PartialEq)]
 enum Message {
     Boom,
@@ -334,7 +330,7 @@ mod tests {
         }
 
         let mut board = Minewreeper::init();
-        board.turn_neighbor(&(4,4));
+        board.flip_around(&(4,4));
         println!("{:?}", board);
     }
 }

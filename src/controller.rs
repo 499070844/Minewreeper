@@ -1,5 +1,4 @@
 use crate::{ Minewreeper, Model, render };
-use wasm_bindgen::prelude::*;
 
 pub trait Controller {
     fn renew_board(&mut self);
@@ -15,13 +14,13 @@ impl Controller for Minewreeper {
     }
 
     fn dig(&mut self, center: &(u8, u8)) {
-        self.turn_neighbor(center);
+        self.flip_around(center);
         render(&format!("{}", self)[..])
     }
 
     fn check(&mut self, center: Vec<&(u8, u8)>) {
         for point in center {
-            self.turn_neighbor(point);
+            self.flip_around(point);
         }
         render(&format!("{}", self)[..])
     }

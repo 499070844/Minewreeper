@@ -14,28 +14,20 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 extern "C" {
-    fn alert(s: &str);
-    #[wasm_bindgen]
-    fn log(s: &str);
     #[wasm_bindgen(js_namespace = document)]
     fn write(str: &str);
+    /// We convert the board to string then pass it to js
     #[wasm_bindgen(js_namespace = window)]
     fn render(str: &str);
 }
 
 #[wasm_bindgen]
-pub fn greet(name: &str) {
-    let s = &format!("Hello, {}", name)[..];
-    unsafe {
-        alert(s);
-    }
-}
-
-#[wasm_bindgen]
-pub fn main() {
+pub fn init() {
     let mut board = Minewreeper::init();
     unsafe {
+        // Test: Dig a block
         board.dig(&(4,4));
+        // Test: Dig several blocks
         board.check(vec![&(0, 0), &(8, 8)]);
     }
 }
