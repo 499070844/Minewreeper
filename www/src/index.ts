@@ -22,8 +22,18 @@ export function render(s: string) {
 // render 函数要绑定 window, 可以通过 #[wasm_bin...(js_namespage = window)]获取
 (window as any).render = render;
 
+const test_closure = (cb: any) => {
+  console.log('test1');
+  cb();
+}
 
+const test2_closure = (cb: any) => {
+  console.log('test2');
+  cb();
+}
 
+(window as any).test2_closure = test2_closure;
+(window as any).test_closure = test_closure;
 
 ///////Canvas//////////////////
 
@@ -158,7 +168,10 @@ if (canvas) {
   canvas.addEventListener('click', getPosition, false);
   canvas.height = (CELL_SIZE + 1) * 9 + 1;
   canvas.width = (CELL_SIZE + 1) * 9 + 1;
-  wasm.main();
+  let a = wasm.init();
+  a.test();
+  a.test();
+  a.test();
 
   const ctx = canvas.getContext("2d")
   if (ctx) {
